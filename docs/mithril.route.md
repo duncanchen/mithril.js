@@ -4,11 +4,13 @@ Routing is a system that allows creating Single-Page-Applications (SPA), i.e. ap
 
 It enables seamless navigability while preserving the ability to bookmark each page individually, and the ability to navigate the application via the browser's history mechanism.
 
-This method overloads 3 different units of functionality:
+This method overloads four different units of functionality:
 
 - `m.route(rootElement, defaultRoute, routes)` - defines the available URLs in an application, and their respective modules
 
 - `m.route(path)` - redirects to another route
+
+- `m.route()` - returns the currently active route
 
 - `m.route(element)` - an extension to link elements that unobtrusively abstracts away the routing mode
 
@@ -24,7 +26,7 @@ Routing is single-page-application (SPA) friendly, and can be implemented using 
 
 To define a list of routes, you need to specify a host DOM element, a default route and a key-value map of possible routes and respective [modules](mithril.module.md) to be rendered.
 
-The example below defines 3 routes, to be rendered in `<body>`. `home`, `login` and `dashboard` are modules. We'll see how to define a module in a bit.
+The example below defines three routes, to be rendered in `<body>`. `home`, `login` and `dashboard` are modules. We'll see how to define a module in a bit.
 
 ```javascript
 m.route(document.body, "/", {
@@ -45,7 +47,7 @@ var dashboard = {
 		this.id = m.route.param("userID");
 	},
 	view: function(controller) {
-		m.render("body", controller.id);
+		return m("div", controller.id);
 	}
 }
 
@@ -68,9 +70,87 @@ Above, `dashboard` is a module. It contains a `controller` and a `view` properti
 
 In this case, since there's only route, the app redirects to the default route `"/dashboard/johndoe"`.
 
-The string `johndoe` is bound to the `:userID` parameter, which can be retrived programmatically in the controller via `m.route.param("userID")`.
+The string `johndoe` is bound to the `:userID` parameter, which can be retrieved programmatically in the controller via `m.route.param("userID")`.
 
 The `m.route.mode` defines which part of the URL to use for routing.
+
+---
+
+#### Variadic routes
+
+We can append an ellipsis (`...`) to the name of a route argument to allow it to match URL snippets that contain slashes:
+
+```javascript
+m.route(document.body, "/files/pictures/pic1.jpg", {
+	"/files/:file...": gallery
+});
+
+m.route.param("file") === "pictures/pic1.jpg"
+```
+
+```javascript
+m.route(document.body, "/blog/2014/01/20/articles", {
+	"/blog/:date.../articles": articleList
+});
+
+m.route.param("date") === "2014/01/20"
+```
+
+Note that Mithril checks for route matches in the order the routes are defined, so you should put variadic routes at the bottom of the list to prevent them from matching other more specific routes.
+
+```
+m.route(document.body, "/blog/archive/2014", {
+	"/blog/:date...": module1, //for the default path in the line above, this route matches first!
+	"/blog/archive/:year": module2
+});
+
+m.route.param("date") === "archive/2014"
+
+//the routes should be flipped around to get `m.route.param("year") == "2014"`
+```
+
+---
+
+#### Routes with querystrings
+
+In addition to route parameters, it's possible to pass arbitrary data to `m.route.param` using the querystring
+
+```javascript
+m.route("/grid?sortby=date&dir=desc")
+
+var sortBy = m.route.param("sortby") // "date"
+var dir = m.route.param("dir") // "desc"
+```
+
+---
+
+#### Running clean up code on route change
+
+If a module's controller implements an instance method called `onunload`, this method will be called when a route changes.
+
+```javascript
+var home = {};
+home.controller = function() {
+	this.onunload = function() {
+		console.log("unloading home module");
+	};
+};
+
+var dashboard = {};
+dashboard.controller = function() {};
+dashboard.view = function() {};
+
+//go to the default route (home)
+m.route(document.body, "/", {
+	"/": home,
+	"/dashboard": dashboard,
+});
+
+//re-route to dashboard
+m.route("/dashboard"); // logs "unloading home"
+```
+
+This mechanism is useful to clear timers and unsubscribe event handlers. If you have a hierarchy of components, you can recursively call `unload` on all the components in the tree or use a [pubsub](http://microjs.com/#pubsub) library to unload specific components on demand.
 
 ---
 
@@ -115,13 +195,13 @@ where:
 
 	**String mode**
 
-	The `m.route.mode` property defines which URL portion is used to implement the routing mechanism. Its value can be set to either "search", "hash" or "pathname". Default value is "search"
+	The `m.route.mode` property defines which URL portion is used to implement the routing mechanism. Its value can be set to either "search", "hash" or "pathname". Default value is "search". Note that if you're changing this configuration value, you should change it **before** calling `m.route`.
 
-	-	`search` mode uses the querystring. This allows named anchors (i.e. `<a href="#top">Back to top</a>`, `<a name="top"></a>`) to work on the page, but routing changes causes page refreshes in IE8, due to its lack of support for `history.pushState`.
+	-	`search` mode uses the querystring (i.e. `?`). This allows named anchors (i.e. `<a href="#top">Back to top</a>`, `<a name="top"></a>`) to work on the page, but routing changes causes page refreshes in IE8, due to its lack of support for `history.pushState`.
 	
 		Example URL: `http://server/?/path/to/page`
 	
-	-	`hash` mode uses the hash. It's the only mode in which routing changes do not cause page refreshes in any browser. However, this mode does not support named anchors.
+	-	`hash` mode uses the hash (i.e. `#`). It's the only mode in which routing changes do not cause page refreshes in any browser. However, this mode does not support named anchors.
 	
 		Example URL: `http://server/#/path/to/page`
 	
@@ -145,9 +225,13 @@ where:
 
 	A route with parameters might look like this:
 
-	`"/path/to/page/:id"` - here `id` is the name of the route parameter
+	`"/path/to/page/:id"` - here, `id` is the name of the route parameter
 
 	If the currently active route is `/dashboard/:userID` and the current URL is `/dashboard/johndoe`, then calling `m.route.param("userID")` returns `"johndoe"`
+	
+	Querystring parameters in a route are also available in this collection automatically.
+	
+	`"/grid?sortby=date"` - here,  `m.route.param("sortby")` returns `"date"`
 	
 	-	**String key**
 	
@@ -165,7 +249,7 @@ where:
 
 #### Usage
 
-You can programmatically redirec to another page. Given the example in the "Defining Routes" section:
+You can programmatically redirect to another page. Given the example in the "Defining Routes" section:
 
 ```javascript
 m.route("/dashboard/marysue");
@@ -180,12 +264,49 @@ redirects to `http://server/#/dashboard/marysue`
 [How to read signatures](how-to-read-signatures.md)
 
 ```clike
-void route(String path)
+void route(String path [, any params])
 ```
 
 -	**String path**
 
 	The route to redirect to. Note that to redirect to a different page outside of the scope of Mithril's routing, you should use `window.location`
+
+-	**any params**
+
+	Parameters to pass as a querystring
+
+---
+
+<a name="reading-current-route"></a>
+
+### Reading the currently active route
+
+#### Usage
+
+Mithril updates the native `location` object after rendering in order to allow the browser's `history.pushState` API to correctly show descriptive history entries (e.g. for Chrome's Ctrl+H page).
+
+In order to retrieve the currently active route in a controller, you can use `m.route()`. This returns the portion of the URL determined by `m.route.mode` (minus the `?` or `#` symbols for the `search` and `hash` modes, respectively).
+
+```javascript
+//if the location bar is "http://example.com/?/foo/bar"
+//and m.route.mode is `search`
+//then `currentRoute == "/foo/bar"`
+var currentRoute = m.route();
+```
+
+---
+
+#### Signature
+
+[How to read signatures](how-to-read-signatures.md)
+
+```clike
+String route()
+```
+
+-	**returns String route**
+
+	returns the currently active route
 
 ---
 
@@ -213,7 +334,7 @@ See [`m()`](mithril.md) for more information on virtual elements.
 [How to read signatures](how-to-read-signatures.md)
 
 ```clike
-void route(DOMElement element, Boolean isNew)
+void route(DOMElement element, Boolean isInitialized)
 ```
 
 -	**DOMElement element**

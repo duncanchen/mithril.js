@@ -53,7 +53,7 @@ m.request({method: "GET", url: "/user"}).then(users).then(doSomething)
 
 While both basic assignment syntax and thennable syntax can be used to the same effect, typically it's recommended that you use the assignment syntax whenever possible, as it's easier to read.
 
-The thennable mechanism is intended to be used in 3 ways:
+The thennable mechanism is intended to be used in three ways:
 
 -	in the model layer: to process web service data in transformative ways (e.g. filtering a list based on a parameter that the web service doesn't support)
 -	in the controller layer: to bind redirection code upon a condition
@@ -136,11 +136,16 @@ As you saw, you can chain operations that act on the response data. Typically th
 -	in the controller, to redirect after a model service resolves.
 -	in the controller, to bind error messages
 
-In the example below, we take advantage of queuing to debug the ajax response data prior to doing further processing on the user list
+In the example below, we take advantage of queuing to debug the AJAX response data prior to doing further processing on the user list
 
 ```javascript
+//a FP-friendly console.log
+var log = function(value) {
+	console.log(value)
+}
+
 var users = m.request({method: "GET", url: "/user"})
-	.then(console.log);
+	.then(log);
 	.then(function(users) {
 		//add one more user to the response
 		return users.concat({name: "Jane"})
@@ -155,7 +160,7 @@ var users = m.request({method: "GET", url: "/user"})
 
 ### Casting the Response Data to a Class
 
-It's possible to auto-cast a JSON response to a class. This is useful when we want to control access to certain properties in an object, as opposed to exposing all the fields in POJOs (plain old javascript objects) for arbitrary processing.
+It's possible to auto-cast a JSON response to a class. This is useful when we want to control access to certain properties in an object, as opposed to exposing all the fields in POJOs (plain old Javascript objects) for arbitrary processing.
 
 In the example below, `User.list` returns a list of `User` instances.
 
@@ -228,6 +233,69 @@ var file = m.request({
 
 ---
 
+### Using variable data formats
+
+By default, Mithril assumes both success and error responses are in JSON format, but some servers may not return JSON responses when returning HTTP error codes (e.g. 404)
+
+You can get around this issue by using `extract`
+
+```javascript
+var nonJsonErrors = function(xhr) {
+  return xhr.status > 200 ? JSON.stringify(xhr.responseText) : xhr.responseText
+}
+
+m.request({method: "GET", url: "/foo/bar.x", extract: nonJsonErrors})
+  .then(function(data) {}, function(error) {console.log(error)})
+```
+
+---
+
+### Extracting Metadata from the Response
+
+The `extract` method can be used to read metadata from HTTP response headers or the status field of an XMLHttpRequest.
+
+```javascript
+var extract = function(xhr, xhrOptions) {
+	if (xhrOptions.method == "HEAD") return xhr.getResponseHeader("x-item-count")
+	else return xhr.responseText
+}
+
+m.request({method: "POST", url: "/foo", extract: extract});
+```
+
+---
+
+### Configuring the underlying XMLHttpRequest
+
+The `config` option can be used to arbitrarily configure the native XMLHttpRequest instance and to access properties that would not be accessible otherwise.
+
+The example below show how to configure a request where the server expects requests to have a `Content-Type: application/json` header
+
+```javascript
+var xhrConfig = function(xhr) {
+	xhr.setRequestHeader("Content-Type", "application/json");
+}
+
+m.request({method: "POST", url: "/foo", config: xhrConfig});
+```
+
+---
+
+### Aborting a request
+
+The `config` option can also be used to retrieve the `XMLHttpRequest` instance for aborting the request. This idiom can also be used to attach `onprogress` event handlers.
+
+```javascript
+var transport = m.prop();
+
+m.request({method: "POST", url: "/foo", config: transport});
+
+//the `transport` getter-setter contains an instance of XMLHttpRequest
+transport().abort();
+```
+
+---
+
 ### Signature
 
 [How to read signatures](how-to-read-signatures.md)
@@ -244,14 +312,15 @@ where:
 		[String user,]
 		[String password,]
 		[Object<any> data,]
-		[Response unwrapSuccess(Response data),]
-		[Response unwrapError(Response data),]
+		[Boolean background,]
+		[any unwrapSuccess(any data),]
+		[any unwrapError(any data),]
 		[String serialize(any dataToSerialize),]
 		[any deserialize(String dataToDeserialize),]
+		[any extract(XMLHttpRequest xhr, XHROptions options),]
 		[void type(Object<any> data),]
-		[void config(XMLHttpRequest xhr, XHROptions options)]
+		[XMLHttpRequest? config(XMLHttpRequest xhr, XHROptions options)]
 	}
-	Response :: Object<any> | Array<any>
 ```
 
 -	**XHROptions options**
@@ -282,9 +351,22 @@ where:
 	
 		Data to be sent. It's automatically placed in the appropriate section of the request with the appropriate serialization based on `method`
 		
-	-	**Response unwrapSuccess(Response data)** (optional)
+	-	**Boolean background** (optional)
+	
+		Determines whether the `m.request` can affect template rendering. Defaults to false.
+		
+		If this option is set to true, then the request does NOT call [`m.startComputation` / `m.endComputation`](mithril.computation.md), and therefore the completion of the request does not trigger an update of the view, even if data has been changed. This option is useful for running operations in the background (i.e. without user intervention).
+		
+		In order to force a redraw after a background request, use [`m.redraw`](mithril.redraw.md)
+		
+		```javascript
+		m.request({method: "GET", url: "/foo", background: true})
+			.then(m.redraw); //force redraw
+		```
+		
+	-	**any unwrapSuccess(any data)** (optional)
 
-		A preprocessor function to extract the data from a success response in case the response contains metadata wrapping the data.
+		A preprocessor function to unwrap the data from a success response in case the response contains metadata wrapping the data.
 		
 		The default value (if this parameter is falsy) is the identity function `function(value) {return value}`
 		
@@ -298,9 +380,9 @@ where:
 		
 			The unwrapped data
 
-	-	**String unwrapError(Response data)** (optional)
+	-	**any unwrapError(any data)** (optional)
 
-		A preprocessor function to extract the data from an error response in case the response contains metadata wrapping the data.
+		A preprocessor function to unwrap the data from an error response in case the response contains metadata wrapping the data.
 		
 		The default value (if this parameter is falsy) is the identity function `function(value) {return value}`
 		
@@ -335,7 +417,13 @@ where:
 			Data to be deserialized
 			
 		-	**returns any deserializedData**
+		
+	-	**any extract(XMLHttpRequest xhr, XHROptions options)** (optional)
+	
+		Method to use to extract the data from the raw XMLHttpRequest. This is useful when the relevant data is either in a response header or the status field.
 
+		If this parameter is falsy, the default value is a function that returns `xhr.responseText`.
+		
 	-	**void type(Object<any> data)** (optional)
 
 		The response object (or the child items if this object is an Array) will be passed as a parameter to the class constructor defined by `type`
@@ -352,7 +440,7 @@ where:
 		
 		And the data is `[{name: "John"}, {name: "Mary"}]`, then the response will contain an array of two User instances.
 		
-	-	**void config(XMLHttpRequest xhr, XHROptions options)** (optional)
+	-	**XMLHttpRequest? config(XMLHttpRequest xhr, XHROptions options)** (optional)
 		
 		An initialization function that runs after `open` and before `send`. Useful for adding request headers and when using XHR2 features, such as the XMLHttpRequest's `upload` property.
 		
@@ -361,8 +449,12 @@ where:
 			The XMLHttpRequest instance.
 			
 		-	**XHROptions options**
-		
+			
 			The `options` parameter that was passed into `m.request` call
+			
+		-	**returns XMLHttpRequest? xhr**
+		
+			You may return an XHR-like object (e.g. a XDomainRequest instance) to override the provided XHR instance altogether.
 	
 -	**returns Promise promise**
 

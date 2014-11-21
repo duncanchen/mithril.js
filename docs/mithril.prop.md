@@ -1,6 +1,6 @@
 ## m.prop
 
-This is a getter-setter factory utility. It returns a function that stores information
+This is a getter-setter factory utility. It returns a function that stores information.
 
 ---
 
@@ -20,7 +20,7 @@ name("Mary"); //Mary
 var b = name(); //b == "Mary"
 ```
 
-It can be used in conjunction with [`m.withAttr`](mithril.withattr) to implement data binding in the view-to-model direction and to provide uniform data access for model entity properties.
+It can be used in conjunction with [`m.withAttr`](mithril.withattr.md) to implement data binding in the view-to-model direction and to provide uniform data access for model entity properties.
 
 ```javascript
 //a contrived example of bi-directional data binding
@@ -41,7 +41,7 @@ var user = {
 
 In the example above, the usage of `m.prop` allows the developer to change the implementation of the user name getter/setter without the need for code changes in the controller and view.
 
-`m.prop` can also be used in conjunction with [`m.request`](mithril.request) and [`m.deferred`](mithril.deferred) to bind data on completion of an asynchronous operation.
+`m.prop` can also be used in conjunction with [`m.request`](mithril.request.md) and [`m.deferred`](mithril.deferred.md) to bind data on completion of an asynchronous operation.
 
 ```javascript
 var users = m.prop([]);
@@ -53,6 +53,38 @@ m.request({method: "GET", url: "/users"})
 //then when resolved (e.g. in a view), the `users` getter-setter will contain a list of User instances
 //i.e. users()[0].name() == "John"
 ```
+
+---
+
+### Third-party promise library support
+
+If a promise is passed into `m.prop()`, its value will populate the prop after resolution.  
+Until the promise is resolved, the value of the prop will resolve to `undefined`
+
+Example using [Q](https://github.com/kriskowal/q)
+
+```javascript
+var deferred = Q.defer()
+var users = m.prop(deferred.promise)
+
+users() // undefined
+
+deferred.resolve("Hello")
+users() // Hello
+```
+
+---
+
+### Serializing getter-setters
+
+Getter-setters are JSON-serializable:
+
+```javascript
+var data = {foo: m.prop("bar")};
+JSON.stringify(data); // '{"foo": "bar"}'
+```
+
+This allows getter-setters to be passed directly as parameters to [`m.request`](mithril.request.md), for example.
 
 ---
 
@@ -70,18 +102,17 @@ where:
 -	**any initialValue** (optional)
 
 	An initialization value. If not provided, the value of the getter-setter's internal store defaults to `undefined`.
-	
+
 -	**returns any getterSetter([any value])**
 
 	A getter-setter method.
-	
+
 	-	**any value** (optional)
-		
+
 		If provided, it updates the getter-setter's internal store to the provided value.
-		
+
 		If not provided, return the current internally stored value.
-		
+
 	-	**returns any value**
-	
+
 		This method always returns the value of the internal store, regardless of whether it was updated or not.
-		

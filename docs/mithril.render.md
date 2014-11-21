@@ -40,17 +40,64 @@ yields:
 
 ---
 
+### Subtree Directives
+
+`m.render` accepts a special low level SubtreeDirective object as a node in a virtual DOM tree: if a tree contains a node that looks exactly like the object below, Mithril will abort the diff algorithm for that node. This allows you to implement optimizations that avoid creating virtual DOM trees in favor of their cached counterparts, if you know they have not changed between redraws. Note that using this feature is discouraged if you don't have visible performance problems.
+
+```javascript
+{subtree: "retain"}
+```
+
+This mechanism is only intended to be used as a last resort optimization tool. If you do use it, you are responsible for determining what constitutes a scenario where the virtual DOM tree is changed/unchanged.
+
+The example below shows how to use a SubtreeDirective object to create a static header that doesn't incur diff costs once it has been rendered. This means that we are avoiding the creation of the header subtree (and therefore skipping the diff algorithm) altogether, but it also means that dynamic variables will NOT be updated within the header.
+
+```
+var app = {}
+
+//here's an example plugin that determines whether data has changes.
+//in this case, it simply assume data has changed the first time, and never changes after that.
+app.bindOnce = new function() {
+	var cache = {}
+	function(view) {
+		if (!cache[view.toString()]) {
+			cache[view.toString()] = true
+			return view()
+		}
+		else return {subtree: "retain"}
+	}
+}
+
+//here's the view
+app.view = function(ctrl) {
+	m(".layout", [
+		app.bindOnce(function() {
+			//this only runs once in order to boost performance
+			//dynamic variables are not updated here
+			return m("header", [
+				m("h1", "this never changes")
+			])
+		}),
+		//dynamic variables here still update on every redraw
+		m("main", "rest of app goes here")
+	])
+}
+```
+
+---
+
 ### Signature
 
 [How to read signatures](how-to-read-signatures.md)
 
 ```clike
-void render(DOMElement rootElement, Children children)
+void render(DOMElement rootElement, Children children [, Boolean forceRecreation])
 
 where:
-	Children :: String text | Array<String text | VirtualElement virtualElement | Children children>
+	Children :: String text | VirtualElement virtualElement | SubtreeDirective directive | Array<Children children>
 	VirtualElement :: Object { String tag, Attributes attributes, Children children }
     Attributes :: Object<Any | void config(DOMElement element)>
+	SubtreeDirective :: Object { String subtree }
 ```
 
 -	**DOMElement rootElement**
@@ -59,9 +106,12 @@ where:
 	
 -	**Children children**
 
-	If this argument is a string, it will be rendered as a text node. To render a string as HTML, see [`m.trust`](mithril.trust)
+	If this argument is a string, it will be rendered as a text node. To render a string as HTML, see [`m.trust`](mithril.trust.md)
 	
 	If it's a VirtualElement, it will be rendered as a DOM Element.
 	
 	If it's a list, its contents will recursively be rendered as appropriate and appended as children of the `root` element.
 
+-	**Boolean forceRecreation**
+
+	If set to true, rendering a new virtual tree will completely overwrite an existing one without attempting to diff against it

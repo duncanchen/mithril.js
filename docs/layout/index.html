@@ -2,7 +2,6 @@
 <html>
 	<head>
 		<title>Mithril</title>
-		<link href="http://fonts.googleapis.com/css?family=Open+Sans:300italic" rel="stylesheet" />
 		<link href="lib/prism/prism.css" rel="stylesheet" />
 		<link href="style.css" rel="stylesheet" />
 	</head>
@@ -12,6 +11,8 @@
 				<a href="index.html" class="logo"><span>&#9675;</span> Mithril</a>
 				<a href="getting-started.html">Guide</a>
 				<a href="mithril.html">API</a>
+				<a href="community.html">Community</a>
+				<a href="http://lhorie.github.io/mithril-blog">Blog</a>
 				<a href="mithril.min.zip">Download</a>
 				<a href="http://github.com/lhorie/mithril.js" target="_blank">Github</a>
 			</nav>
@@ -24,17 +25,30 @@
 
 					<p>A Javascript Framework for Building Brilliant Applications</p>
 
-					<a class="button" href="getting-started.html">Guide</a>
-					<a class="button" href="mithril.min.zip">Download v$version</a>
+					<p>
+						<a class="button" href="getting-started.html">Guide</a>
+						<a class="button" href="mithril.min.zip">Download v$version</a>
+					</p>
+					
+					<iframe src="http://ghbtns.com/github-btn.html?user=lhorie&repo=mithril.js&type=watch&count=true" allowtransparency="true" frameborder="0" scrolling="0" width="100" height="20"></iframe>
+					
+					<a href="https://twitter.com/share" class="twitter-share-button" data-url="http://lhorie.github.io/mithril" data-via="LeoHorie">Tweet</a>
+					<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+					
+					<a href="http://flattr.com/thing/2778375/lhoriemithril-js-on-GitHub" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr" title="Flattr" border="0" /></a>
 				</div>
 			</section>
 			
 			<section class="features">
+				<div class="container">
+					<h2>What is Mithril?</h2>
+					<p>Mithril is a client-side MVC framework - a tool to organize code in a way that is easy to think about and to maintain.</p>
+				</div>
 				<div class="container row">
 					<div class="feature col(4,4,12)">
 						<h2>Light-weight</h2>
 						<ul>
-							<li>Only 3kb gzipped, no dependencies</li>
+							<li>Only 5kb gzipped, no dependencies</li>
 							<li>Small API, small learning curve</li>
 						</ul>
 					</div>
@@ -73,13 +87,20 @@ app.PageList = function() {
 //controller
 app.controller = function() {
 	this.pages = app.PageList();
+	
+	this.rotate = function() {
+		this.pages().push(this.pages().shift())
+	}.bind(this)
 };
 
 //view
 app.view = function(ctrl) {
-	return ctrl.pages().map(function(page) {
-		return m("a", {href: page.url}, page.title);
-	});
+	return [
+		ctrl.pages().map(function(page) {
+			return m("a", {href: page.url}, page.title);
+		}),
+		m("a", {onclick: ctrl.rotate}, "Rotate links")
+	];
 };
 
 //initialize
@@ -89,10 +110,6 @@ m.module(document.getElementById("example"), app);</code></pre>
 					<div class="col(4,4,12)">
 						<h2>Output</h2>
 						<div id="example" class="example output">
-							<noscript>
-								<a href="getting-started.html">Getting Started</a>
-								<a href="mithril.html">Documentation</a></div>
-							</noscript>
 							<script src="mithril.min.js"></script>
 							<script>
 //namespace
@@ -106,13 +123,20 @@ app.PageList = function() {
 //controller
 app.controller = function() {
 	this.pages = app.PageList();
+	
+	this.rotate = function() {
+		this.pages().push(this.pages().shift())
+	}.bind(this)
 };
 
 //view
 app.view = function(ctrl) {
-	return ctrl.pages().map(function(page) {
-		return m("a", {href: page.url}, page.title);
-	});
+	return [
+		ctrl.pages().map(function(page) {
+			return m("a", {href: page.url}, page.title);
+		}),
+		m("button", {onclick: ctrl.rotate}, "Rotate links")
+	];
 };
 
 //initialize
@@ -125,16 +149,17 @@ m.module(document.getElementById("example"), app);
 
 			<section class="performance">
 				<div class="container">
-					<h2>Performance</h2>
-					<p>To run the execution time tests below, click on their respective links, run the profiler from your desired browser's developer tools and measure the running time of a page refresh. (Lower is better)</p>
+					<h2 id="performance">Performance</h2>
+					<p>To run the execution time tests below, click on their respective links, run the profiler from your desired browser's developer tools and measure the running time of a page refresh (Lower is better). <a href="benchmarks.html">Read more</a></p>
 					<div class="row">
 						<div class="col(4,4,6)">
 							<h3>Loading</h3>
 							<table>
 								<tr><td><a href="comparisons/mithril.parsing.html">Mithril</a></td><td><span class="bar" style="background:#161;width:1%;"></span> 0.28ms</td></tr>
-								<tr><td><a href="comparisons/jquery.parsing.html">jQuery</a></td><td><span class="bar" style="background:#66c;width:35%;"></span> 13.11ms</td></tr>
-								<tr><td><a href="comparisons/backbone.parsing.html">Backbone</a></td><td><span class="bar" style="background:#33c;width:50%;"></span> 18.54ms</td></tr>
-								<tr><td><a href="comparisons/angular.parsing.html">Angular</a></td><td><span class="bar" style="background:#c33;width:20%;"></span> 7.49ms</td></tr>
+								<tr><td><a href="comparisons/jquery.parsing.html">jQuery</a></td><td><span class="bar" style="background:#66c;width:26%;"></span> 13.11ms</td></tr>
+								<tr><td><a href="comparisons/backbone.parsing.html">Backbone</a></td><td><span class="bar" style="background:#33c;width:37%;"></span> 18.54ms</td></tr>
+								<tr><td><a href="comparisons/angular.parsing.html">Angular</a></td><td><span class="bar" style="background:#c33;width:14%;"></span> 7.49ms</td></tr>
+								<tr><td><a href="comparisons/react.parsing.html">React</a></td><td><span class="bar" style="background:#6af;width:50%;"></span> 24.99ms</td></tr>
 							</table>
 						</div>
 						<div class="col(8,8,12)">
@@ -144,6 +169,7 @@ m.module(document.getElementById("example"), app);
 								<tr><td><a href="comparisons/jquery.rendering.html">jQuery</a></td><td><span class="bar" style="background:#66c;width:17%;"></span> 40.27ms</td></tr>
 								<tr><td><a href="comparisons/backbone.rendering.html">Backbone</a></td><td><span class="bar" style="background:#33c;width:10%;"></span> 23.05ms</td></tr>
 								<tr><td><a href="comparisons/angular.rendering.html">Angular</a></td><td><span class="bar" style="background:#c33;width:50%;"></span> 118.63ms</td></tr>
+								<tr><td><a href="comparisons/react.rendering.html">React</a></td><td><span class="bar" style="background:#6af;width:33%;"></span> 79.65ms</td></tr>
 							</table>
 						</div>
 					</div>
@@ -164,6 +190,7 @@ m.module(document.getElementById("example"), app);
 							<a href="comparisons/jquery.safety.html">jQuery</a> <em class="error">(fail) &#x2717;</em><br />
 							<a href="comparisons/backbone.safety.html">Backbone</a> <em class="error">(fail) &#x2717;</em><br />
 							<a href="comparisons/angular.safety.html">Angular</a> <em class="success">(pass) &#x2713;</em><br />
+							<a href="comparisons/react.safety.html">React</a> <em class="success">(pass) &#x2713;</em><br />
 						</div>
 					</div>
 				</div>
@@ -171,16 +198,56 @@ m.module(document.getElementById("example"), app);
 			
 			<section class="more">
 				<div class="container row">
-					<div class="col(6,6,12)">
-						<h2>Guide</h2>
-						<p>Build a simple app, learn the ropes</p>
-						<p><a href="getting-started.html">Read Guide</a></p>
+					<div class="col(3,6,12)">
+						<div style="padding:0 2em 0 0;">
+							<h2>Guide</h2>
+							<p>Build a simple application. Learn the ropes</p>
+							<p><a href="getting-started.html">Read Guide</a></p>
+						</div>
 					</div>
 
-					<div class="col(6,6,12)">
-						<h2>API</h2>
-						<p>Docs and code samples for your reference</p>
-						<p><a href="mithril.html">Read Docs</a></p>
+					<div class="col(3,6,12)">
+						<div style="padding:0 2em 0 0;">
+							<h2>API</h2>
+							<p>Docs and code samples for your reference</p>
+							<p><a href="mithril.html">Read Docs</a></p>
+						</div>
+					</div>
+
+					<div class="col(3,6,12)">
+						<div style="padding:0 2em 0 0;">
+							<h2>Blog</h2>
+							<p>Weekly articles on how to use Mithril to its full potential.</p>
+							<p><a href="http://lhorie.github.io/mithril-blog">Read blog</a></p>
+						</div>
+					</div>
+
+					<div class="col(3,6,12)">
+						<div style="padding:0 2em 0 0;">
+							<h2>Mailing List</h2>
+							<p>Post questions and discuss Mithril related topics.</p>
+							<p><a href="https://groups.google.com/forum/#!forum/mithriljs">Go to mailing list</a></p>
+						</div>
+					</div>
+				</div>
+			</section>
+			
+			<section class="socialmedia">
+				<div class="container row">
+					<h2>Social Media</h2>
+					<div class="col(6,12,12)">
+						<div style="padding:0 1em 0 0;">
+						<blockquote class="twitter-tweet" lang="en"><p>Just converted the MELPA site from Angular to <a href="https://twitter.com/LeoHorie">@LeoHorie</a>&#39;s tiny mithril.js: very pleasant. <a href="http://t.co/R7JKfo9vJ1">http://t.co/R7JKfo9vJ1</a> <a href="https://t.co/7IrR3L84OY">https://t.co/7IrR3L84OY</a></p>&mdash; Steve Purcell (@sanityinc) <a href="https://twitter.com/sanityinc/statuses/471358494101504000">May 27, 2014</a></blockquote>
+						
+						<blockquote class="twitter-tweet" lang="en"><p><a href="https://twitter.com/marijnjh">@marijnjh</a> Mithril is well worth checking out: <a href="http://t.co/RT61djMFxD">http://t.co/RT61djMFxD</a> Functional style, elegant design and powerful and only 3kb gzipped.</p>&mdash; Tom Atkins (@knitatoms) <a href="https://twitter.com/knitatoms/statuses/467061326859476992">May 15, 2014</a></blockquote>
+						</div>
+					</div>	
+					<div class="col(6,12,12)">
+						<blockquote class="twitter-tweet" lang="en"><p>Mithril.js m.prop feature is plain brilliant. I spent years yearning for an approach that lightweight <a href="http://t.co/KgzOxoa2WR">http://t.co/KgzOxoa2WR</a></p>&mdash; Xavier Via (@xaviervia) <a href="https://twitter.com/xaviervia/statuses/454635992360554497">April 11, 2014</a></blockquote>
+						
+						<blockquote class="twitter-tweet" lang="en"><p>Mithril: The newest JavaScript MVC library 3Kb. <a href="http://twitter.com/LeoHorie">@LeoHorie</a> got it right: It's all about good guides/docs: <a href="http://lhorie.github.io/mithril/comparison.html">lhorie.github.io/mithril/comparison.html</a></p> &mdash; David Corbacho (@dcorbacho) <a href="https://twitter.com/dcorbacho/status/446926407843991552">March 21, 2014</a></blockquote>
+						
+						<script async src="http://platform.twitter.com/widgets.js"></script>
 					</div>
 				</div>
 			</section>

@@ -1,8 +1,8 @@
 ## m.module
 
-A module is an Object with two keys: `controller` and `view`. Each of those should point to a Javascript class constructor function.
+A module is an Object with two keys: `controller` and `view`. Each of those should point to a Javascript function.
 
-'m.module' activates a module by instantiating its controller, then instantiating its view and rendering it into a root DOM element.
+When using `m.module`, Mithril instantiates controllers as if they were class constructors. However, controllers may return objects if you want to use that Javascript feature to have more fine-grained control over a controller's lifecycle.
 
 Conceptually, the easiest way to think of a module is as a logical namespace with which to organize applications. For example, an app might have a dashboard module, a userEditForm module, an autocompleter module, a date formatting module, etc
 
@@ -23,11 +23,11 @@ You can make anonymous modules out of existing classes
 ```javascript
 //controller class
 var dashboardController = function() {
-		this.greeting = "Hello";
+	this.greeting = "Hello";
 };
 
 //view class
-var dashboardView = function() {
+var dashboardView = function(ctrl) {
 	return m("h1", ctrl.greeting);
 };
 
@@ -43,11 +43,11 @@ var dashboard = {}
 
 //controller class
 dashboard.controller = function() {
-		this.greeting = "Hello";
+	this.greeting = "Hello";
 };
 
 //view class
-dashboard.view = function() {
+dashboard.view = function(ctrl) {
 	return m("h1", ctrl.greeting);
 };
 
@@ -69,7 +69,7 @@ var dashboard = {
 		return [
 			m("h1", controller.greeting),
 			
-			new user.view(controller.user)
+			user.view(controller.user)
 		];
 	}
 };
@@ -103,6 +103,43 @@ yields:
 </body>
 ```
 
+### Unloading modules
+
+If a module's controller implements an instance method called `onunload`, this method will be called when a new `m.module` call updates the root DOM element tied to the module in question.
+
+```javascript
+var module1 = {};
+module1.controller = function() {
+	this.onunload = function() {
+		console.log("unloading module 1");
+	};
+};
+module1.view = function() {};
+
+m.module(document, module1);
+
+
+
+var module2 = {};
+module2.controller = function() {};
+module1.view = function() {};
+
+m.module(document, module2); // logs "unloading module 1"
+```
+
+This mechanism is useful to clear timers and unsubscribe event handlers. If you have a hierarchy of components, you can recursively call `onunload` on all the components in the tree or use a [pubsub](http://microjs.com/#pubsub) library to unload specific components on demand.
+
+You can also use this event to prevent a module from being unloaded (e.g. to alert a user to save their changes before navigating away from a page)
+
+```javascript
+var module1 = {}
+module1.controller = function() {
+	this.onunload = function(e) {
+		if (!confirm("are you sure you want to leave this page?")) e.preventDefault()
+	}
+}
+```
+
 ---
 
 ### Signature
@@ -113,7 +150,9 @@ yields:
 void module(DOMElement rootElement, Module module)
 
 where:
-	Module :: Object { void controller(), void view(Object controllerInstance) }
+	Module :: Object { Controller, void view(Object controllerInstance) }
+	Controller :: void controller() | void controller() { prototype: void unload(UnloadEvent e) }
+	UnloadEvent :: Object {void preventDefault()}
 ```
 
 -	**DOMElement rootElement**
@@ -130,9 +169,9 @@ where:
 	
 	Note that controllers can manually instantiate child controllers (since they are simply Javascript constructors), and likewise, views can instantiate child views and manually pass the child controller instances down the the child view constructors.
 	
-	This "turtles all the way down" approach is the heart of Mithril's component system.
+	This "[turtles all the way down](https://en.wikipedia.org/wiki/Turtles_all_the_way_down)" approach is the heart of Mithril's component system.
 	
-	Components are nothing more than decoupled classes that can be dynamically brought together as required. This permits the swapping of implementations at a routing level (for example, if implementing widgetized versions of existing components) and class dependency hierarchies can be structurally organized to provide uniform interfaces (for unit tests, for example).
+	Components are nothing more than decoupled classes that can be dynamically brought together as required. This permits the swapping of implementations at a routing level (for example, if implementing widgetized versions of existing components), and class dependency hierarchies can be structurally organized to provide uniform interfaces (for unit tests, for example).
 
 
 

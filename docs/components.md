@@ -24,10 +24,10 @@ dashboard.controller = function() {
 dashboard.view = function(ctrl) {
 	return m("#example", [
 		m(".profile", [
-			new userProfile.view(this.userProfile);
+			userProfile.view(ctrl.userProfile)
 		]),
 		m(".projects", [
-			new projectList.view(this.projectList);
+			projectList.view(ctrl.projectList)
 		])
 	])
 }
@@ -67,9 +67,9 @@ projectList.view = function(ctrl) {
 m.module(document.body, dashboard);
 ```
 
-As you can see, components look exactly like regular modules - it's turtles all the way down! Remember that modules are simply dumb containers for `controller` and `view` classes.
+As you can see, components look exactly like regular modules - it's [turtles all the way down](https://en.wikipedia.org/wiki/Turtles_all_the_way_down)! Remember that modules are simply dumb containers for `controller` and `view` classes.
 
-This means components are decoupled both *horizontally* and *vertically*. It's possible to refactor each component as a isolated unit of logic (which itself follows the MVC pattern). And we can do so without touching the rest of the application (as long as the component API stays the same).
+This means components are decoupled both *horizontally* and *vertically*. It's possible to refactor each component as an isolated unit of logic (which itself follows the MVC pattern). And we can do so without touching the rest of the application (as long as the component API stays the same).
 
 Similarly, it's possible to mix and match different classes to make mix-in anonymous components (e.g. it's straightforward to build several views - for, say, a mobile app - that use the same controller).
 
@@ -87,40 +87,40 @@ Applications often reuse rich UI controls that aren't provided out of the box by
 var autocompleter = {};
 
 autocompleter.controller = function(data, getter) {
-	//binding for the text input
-	this.value = m.prop("");
-	//store for the list of items
-	this.data = m.prop([]);
-	
-	//method to determine what property of a list item to compare the text input's value to
-	this.getter = getter;
-	
-	//this method changes the relevance list depending on what's currently in the text input
-	this.change = function(value) {
-		this.value(value);
-		
-		var data = value === "" ? [] : data.filter(function(item) {
-			return this.getter(item).toLowerCase().indexOf(value.toLowerCase()) > -1;
-		}, this);
-		this.data(data);
-	};
-	
-	//this method is called when an option is selected. It triggers an `onchange` event
-	this.select = function(value) {
-		this.value(value);
-		this.data([]);
-		if (this.onchange) this.onchange({target: {value: value}});
-	};
+    //binding for the text input
+    this.value = m.prop("");
+    //store for the list of items
+    this.data = m.prop([]);
+
+    //method to determine what property of a list item to compare the text input's value to
+    this.getter = getter;
+
+    //this method changes the relevance list depending on what's currently in the text input
+    this.change = function(value) {
+        this.value(value);
+
+        var list = value === "" ? [] : data.filter(function(item) {
+            return this.getter(item).toLowerCase().indexOf(value.toLowerCase()) > -1;
+        }, this);
+        this.data(list);
+    };
+
+    //this method is called when an option is selected. It triggers an `onchange` event
+    this.select = function(value) {
+        this.value(value);
+        this.data([]);
+        if (this.onchange) this.onchange({currentTarget: {value: value}});
+    };
 }
 
 autocompleter.view = function(ctrl, options) {
-	if (options) ctrl.onchange = options.onchange;
-	return [
-		m("input", {oninput: m.withAttr("value", ctrl.change.bind(ctrl)), value: ctrl.value()}),
-		ctrl.data().map(function(item) {
-			return m("div", {data: ctrl.getter(item), onclick: m.withAttr("data", ctrl.select.bind(ctrl))}, ctrl.getter(item));
-		})
-	];
+    if (options) ctrl.onchange = options.onchange;
+    return [
+        m("input", {oninput: m.withAttr("value", ctrl.change.bind(ctrl)), value: ctrl.value()}),
+        ctrl.data().map(function(item) {
+            return m("div", {data: ctrl.getter(item), onclick: m.withAttr("data", ctrl.select.bind(ctrl))}, ctrl.getter(item));
+        })
+    ];
 }
 
 
@@ -129,19 +129,20 @@ autocompleter.view = function(ctrl, options) {
 var dashboard = {}
 
 dashboard.controller = function() {
-	this.names = m.prop([{id: 1, name: "John"}, {id: 2, name: "Bob"}, {id: 2, name: "Mary"}]);
-	this.autocompleter = new autocompleter.controller(this.names(), function(item) {
-		return item.name;
-	});
+    this.names = m.prop([{id: 1, name: "John"}, {id: 2, name: "Bob"}, {id: 2, name: "Mary"}]);
+    this.autocompleter = new autocompleter.controller(this.names(), function(item) {
+        return item.name;
+    });
 };
 
 dashboard.view = function(ctrl) {
-	//assuming there's an element w/ id = "example" somewhere on the page
-	return m("#example", [
-		new autocompleter.view(ctrl.autocompleter, {onchange: m.withAttr("value", console.log)}),
-	]);
+    return m("#example", [
+        new autocompleter.view(ctrl.autocompleter, {onchange: m.withAttr("value", log)}),
+    ]);
 };
 
+//an FP-friendly console.log
+var log = function(value) {console.log(value)}
 
 
 //initialize
